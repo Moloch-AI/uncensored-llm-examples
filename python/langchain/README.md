@@ -79,10 +79,12 @@ with the mock's `[mock:inline-think]`); the `invoke` demo splits it off.
 ### Retries: `max_retries=0`, then `.with_retry()` with a policy
 
 - `ChatOpenAI(max_retries=...)` is handed to the OpenAI SDK client; unset, the SDK's default of 2
-  applies. The SDK retries 408, 409, 429, every 5xx and connection errors. Verified: with the
-  default, one `invoke()` that hit a quota 429 reached the mock 3 times before
-  `OpenAIRateLimitError` was raised. A quota error does not pass before `resets_at`, and
-  503 `model_unavailable` is retried the same way.
+  applies. The SDK retries 408, 409, 429, every 5xx and connection errors, unless the response
+  carries `X-Should-Retry: false`, which it checks first. MolochAI sends that header on quota and
+  session 429s, 402 and 413. Verified: with the default, one `invoke()` that hit a quota 429
+  reached the mock once before `OpenAIRateLimitError` was raised (3 times with a mock that does
+  not send the header, such as uncensored-ai-api v0.1.0). 503 `model_unavailable` carries no such
+  header and is retried twice.
 - LangChain adds no retries unless you call `.with_retry()`, and that stacks on the SDK's: with
   `.with_retry(stop_after_attempt=3)` on a client with default `max_retries`, one `invoke()`
   against a 503 sent 9 requests (verified).
@@ -94,7 +96,7 @@ with the mock's `[mock:inline-think]`); the `invoke` demo splits it off.
 - Rate-limit 429s (`Too Many Attempts.`, over 60 requests per minute) carry `Retry-After`, which
   `with_retry` cannot read; it waits with its own exponential backoff. The policy leaves them alone
   rather than retrying too early. If you need them retried, do it in your own loop or keep the
-  SDK's retries for that client, accepting that they also retry quota errors.
+  SDK's retries for that client, accepting that they also retry 503 `model_unavailable`.
 - `.with_retry()` covers `invoke()` and `batch()` (and their async forms), not `stream()`. Verified:
   a stream whose first request failed with 502 was not retried. A stream that fails after text was
   printed should not be silently restarted anyway.

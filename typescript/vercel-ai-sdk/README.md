@@ -73,7 +73,8 @@ fields from there.
   last attempt it throws a `RetryError` (`reason: 'maxRetriesExceeded'`) that wraps the attempts.
 - Verified: one `generateText` that hit a quota 429 made 3 requests over about 6 s before the
   `RetryError`; 503 `model_unavailable` was retried the same way. A quota error does not pass
-  before `resets_at`.
+  before `resets_at`. The AI SDK ignores the `X-Should-Retry: false` header that MolochAI sends on
+  quota errors (the OpenAI SDKs obey it), so the 3 requests are the same with or without it.
 - `createOpenAICompatible` has no option to change which errors count as retryable. (The
   provider's chat model class accepts an `errorStructure` with `isRetryable`, but the factory does
   not pass one through.)

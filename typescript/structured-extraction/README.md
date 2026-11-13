@@ -83,5 +83,6 @@ $ npx tsx structured-extraction/main.ts structured-extraction/sample-notes.txt
 
 - Invalid reply: one repair round that sends back each zod issue as `at <path>: <message>`, then
   exit 1.
-- Unreadable input file or API error: exit 1 with a message. The SDK retries 429 and 5xx twice.
+- Unreadable input file or API error: exit 1 with a message. The SDK retries 429 and 5xx twice,
+  but not quota 429s, which MolochAI marks `X-Should-Retry: false`.
 - Validation checks shape and types, not facts. Review extracted data before acting on it.

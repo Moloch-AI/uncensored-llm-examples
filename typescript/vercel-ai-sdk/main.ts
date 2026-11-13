@@ -13,7 +13,8 @@
 //   inside it both arrive as `error` parts; textStream just ends early. This
 //   file reads fullStream so that a cut-off answer is reported as one.
 // - The SDK's own retries (maxRetries, default 2) also retry 429 quota errors and
-//   503 model_unavailable, so they are off here and a small policy decides.
+//   503 model_unavailable (it ignores the API's X-Should-Retry: false header), so
+//   they are off here and a small policy decides.
 //
 // Answers go to stdout; reasoning, tool steps, usage and errors go to stderr.
 

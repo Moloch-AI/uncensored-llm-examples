@@ -62,7 +62,7 @@ def request(args: argparse.Namespace) -> dict[str, Any]:
         "api_key": api_key,
         "messages": [{"role": "user", "content": args.prompt}],
         # The OpenAI SDK under LiteLLM retries every 429 and 5xx twice by default,
-        # including quota errors that cannot pass before `resets_at`.
+        # except responses marked `X-Should-Retry: false` (MolochAI's quota errors).
         "max_retries": 0,
         "timeout": 60,
     }

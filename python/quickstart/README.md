@@ -78,8 +78,9 @@ Mock reply from glm-5.3-flash: Name three uses for a hash map.
 - Extra fields are shown when present: `resets_at` for quota errors, `estimated_tokens`,
   `context_cap` and `bound_by` for 413 `context_length_exceeded`, `model` for 503 `model_unavailable`.
 - The SDK retries connection errors, 429 and 5xx twice on its own (`max_retries=2`). That includes
-  429 quota errors, which cannot pass before `resets_at`, and 503 `model_unavailable`. For a single
-  request that costs a few seconds at most; [../model-selection](../model-selection) and
+  503 `model_unavailable`, but not 429 quota errors: MolochAI marks those `X-Should-Retry: false`,
+  and the SDK checks that header first. For a single request that costs a few seconds at most;
+  [../model-selection](../model-selection) and
   [../../javascript/text-processing](../../javascript/text-processing) turn SDK retries off and
   apply their own policy.
 - `finish_reason: "length"` means the reply hit the plan's output cap. `max_tokens` is accepted but

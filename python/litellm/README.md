@@ -70,12 +70,15 @@ problem in that wheel, unrelated to MolochAI.
 ### Retries
 
 - `max_retries` (default 2) is handed to the OpenAI SDK client, which retries every 429, every 5xx
-  and connection errors. Verified: one quota 429 reached the mock 3 times with the default.
+  and connection errors, unless the response carries `X-Should-Retry: false`. MolochAI sends that
+  header on quota and session 429s, 402 and 413. Verified: one quota 429 reached the mock once
+  with the default (3 times with a mock that does not send the header, such as
+  uncensored-ai-api v0.1.0).
 - `num_retries=N` replaces `max_retries` with `N` for the SDK client and then repeats the whole
   call up to `N` more times on any `openai.APIError`, which includes 402, 403, 413, 422 and quota
-  429s. Verified: `num_retries=2` sent 5 requests for one quota error (also with `max_retries=0`)
-  and 3 requests for a 413. Per the 1.109.1 source, the default strategy does not wait between
-  those outer attempts.
+  429s. This outer loop ignores `X-Should-Retry`. Verified: `num_retries=2` sent 3 requests for
+  one quota error (5 without the header) and 3 requests for a 413. Per the 1.109.1 source, the
+  default strategy does not wait between those outer attempts.
 - This example passes `max_retries=0`, does not use `num_retries`, and retries in
   `call_with_retries()`: connection errors, 502, 504, 524 and 503 `server_busy` with exponential
   backoff and jitter, and the 429 rate limit after `Retry-After`. It never retries 401, 402, 403,

@@ -13,9 +13,10 @@ What it shows (verified against the mock with langchain-openai 1.7.4):
   sends the schema as a tool instead, which MolochAI does support.
 - ChatOpenAI drops `reasoning_content` from replies and never sends it back.
   ChatMolochAI below keeps it.
-- ChatOpenAI's `max_retries` is the OpenAI SDK's retry count, and that SDK retries
-  every 429, including quota errors that cannot pass before `resets_at`. This file
-  turns it off and retries with `.with_retry()` and a policy that reads the error.
+- ChatOpenAI's `max_retries` is the OpenAI SDK's retry count. That SDK retries every
+  429 and 5xx unless the response says `X-Should-Retry: false`, as MolochAI's quota
+  errors do; it still retries 503 `model_unavailable`. This file turns it off and
+  retries with `.with_retry()` and a policy that reads the error.
 
 Answers go to stdout; reasoning, tool steps, usage and errors go to stderr.
 """

@@ -39,7 +39,7 @@ def main() -> int:
     # A plain request has to finish before the edge gives up (about 100 s), so
     # keep the timeout near that. Anything that can run long should stream:
     # see ../streaming. The SDK retries connection errors, 429 and 5xx twice by
-    # default; that includes quota errors that cannot pass until `resets_at`.
+    # default, but not quota errors: MolochAI marks them `X-Should-Retry: false`.
     client = make_client(timeout=120.0, max_retries=2)
 
     try:

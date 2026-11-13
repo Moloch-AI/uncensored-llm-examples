@@ -88,7 +88,8 @@ The second turn's `20 in` is the history at work: the first exchange was sent ag
 
 - Exit status: 0 if every turn succeeded, 1 if any turn failed (useful when the chat is scripted
   through a pipe) or the session ended on a fatal error.
-- The SDK retries 429 and 5xx twice before a turn fails (`maxRetries: 2`).
+- The SDK retries 429 and 5xx twice before a turn fails (`maxRetries: 2`), but not quota 429s,
+  which MolochAI marks `X-Should-Retry: false`.
 - History grows with every turn. When it no longer fits, the gateway answers 413
   `context_length_exceeded`; the hint suggests `/reset`. A longer-lived app would drop or summarize
   old turns instead.
