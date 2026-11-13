@@ -1,0 +1,21 @@
+Weekly sync: billing migration
+
+Attendees: platform team, billing team, support lead, docs team.
+
+Status
+- The new invoice service has been running in shadow mode for two weeks. Totals match the old system on every invoice except those with a manual adjustment.
+- Support saw four tickets about duplicate receipt emails after the last deploy.
+
+Decisions
+- Cut over to the new invoice service on the 1st of next month, not mid-month, so no invoice spans both systems.
+- Manual adjustments stay in the old system until the new one has an audit log.
+
+Action items
+- Platform team: add an audit log for manual adjustments in the new service. Due before the cut-over.
+- Billing team: write the rollback runbook and test it once in staging by Friday.
+- Support lead: answer the four duplicate-receipt tickets and link them to the bug.
+- Docs team: update the billing FAQ once the cut-over date is confirmed.
+
+Open questions
+- Do we need to notify customers about the change of invoice number format?
+- Who owns the old system after the cut-over: billing or platform?

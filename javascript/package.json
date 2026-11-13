@@ -1,0 +1,20 @@
+{
+  "name": "molochai-examples-javascript",
+  "version": "0.0.0",
+  "private": true,
+  "description": "JavaScript (Node) examples for the MolochAI API",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "biome ci ."
+  },
+  "dependencies": {
+    "openai": "7.56.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.7"
+  }
+}

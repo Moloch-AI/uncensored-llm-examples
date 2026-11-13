@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  examples:
+    name: Lint, typecheck and smoke-test against the mock
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # The mock server the smoke tests run against. No secrets and no network
+      # calls to the real API: every example talks to this mock.
+      - uses: actions/checkout@v7
+        with:
+          repository: Moloch-AI/uncensored-ai-api
+          ref: v0.1.0
+          path: uncensored-ai-api
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: python/requirements*.txt
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            javascript/package-lock.json
+            typescript/package-lock.json
+
+      - name: Install Python dependencies
+        run: python -m pip install -r python/requirements-dev.txt
+
+      - name: Install JavaScript dependencies
+        working-directory: javascript
+        run: npm ci
+
+      - name: Install TypeScript dependencies
+        working-directory: typescript
+        run: npm ci
+
+      - name: Lint Python (ruff)
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Lint JavaScript (biome)
+        working-directory: javascript
+        run: npx biome ci .
+
+      - name: Lint and typecheck TypeScript (biome, tsc)
+        working-directory: typescript
+        run: |
+          npx biome ci .
+          npx tsc --noEmit
+
+      - name: Check for committed secrets
+        run: python local-development/check_secrets.py --all
+
+      - name: Smoke-test every example against the mock server
+        env:
+          MOLOCHAI_MOCK_SERVER: uncensored-ai-api/mock-server/server.mjs
+        run: python scripts/run-all.py

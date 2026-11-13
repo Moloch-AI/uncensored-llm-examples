@@ -1,0 +1,26 @@
+# Secrets: never commit real keys. Copy .env.example to .env instead.
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+
+# Node
+node_modules/
+
+# CI checks out the mock server repository here; it is not part of this repo.
+/uncensored-ai-api/
+
+# Editors and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Output files the examples can write
+*.jsonl

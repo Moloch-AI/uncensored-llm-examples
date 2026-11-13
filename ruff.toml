@@ -1,0 +1,18 @@
+# Ruff settings for every Python file in this repository.
+target-version = "py310"
+line-length = 100
+extend-exclude = ["uncensored-ai-api", "**/node_modules"]
+
+[lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF", "PL"]
+ignore = [
+  "PLR0911", # examples branch on many error kinds on purpose
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "PLR2004", # literal status codes read better than named constants here
+]
+
+[lint.per-file-ignores]
+# The smoke-test case table reads better with one case per few long lines.
+"scripts/run-all.py" = ["E501"]
