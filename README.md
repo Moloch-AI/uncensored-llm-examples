@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Task-oriented, runnable examples in Python, JavaScript and TypeScript for the MolochAI API, built on
-the official OpenAI SDKs.
+the official OpenAI SDKs, plus integrations with LangChain, LiteLLM and the Vercel AI SDK.
 
 ## Overview
 
@@ -55,16 +55,39 @@ GitHub as their READMEs describe.
 | [javascript/text-processing](javascript/text-processing) | JavaScript | Batch processing with a concurrency limit, pacing under 60 requests/minute, `Retry-After`, a retry policy per error type |
 | [typescript/terminal-chat](typescript/terminal-chat) | TypeScript | Multi-turn chat with history, streaming, `/model` and `/reset`, sending `reasoning_content` back |
 | [typescript/structured-extraction](typescript/structured-extraction) | TypeScript | One zod schema for the prompt, the validation and the static type |
+| [python/langchain](python/langchain) | Python, LangChain | `ChatOpenAI` with invoke, streaming and `bind_tools`; why `with_structured_output` needs `method="function_calling"` here; keeping `reasoning_content`; retries that do not stack |
+| [python/litellm](python/litellm) | Python, LiteLLM | `completion`/`acompletion` with `openai/<model id>`; which LiteLLM exception each error becomes; no network at import; no blind retries |
+| [typescript/vercel-ai-sdk](typescript/vercel-ai-sdk) | TypeScript, Vercel AI SDK | `generateText`, `streamText` and a tool with `@ai-sdk/openai-compatible`; reasoning; in-stream errors that do not throw |
 | [local-development](local-development) | Python (tooling) | Keys in `.env`, running against the mock, switching to a self-hosted server, a pre-commit secret check |
 
 Each example folder has its own README: what it does, dependencies, install, configuration, how to
-run it, sample output (labeled when it comes from the mock) and error handling notes.
+run it, sample output (labeled when it comes from the mock) and error handling notes. The three
+framework READMEs also say which behavior was verified against the mock and with which versions.
+
+## Using it from other tools
+
+Apps that you configure rather than program cannot be tested here, so their setup lives on the
+website instead of in this repository:
+
+- [All integrations](https://molochai.dev/integrations?utm_source=github&utm_medium=oss&utm_campaign=uncensored-llm-examples)
+- [SillyTavern](https://molochai.dev/integrations/sillytavern?utm_source=github&utm_medium=oss&utm_campaign=uncensored-llm-examples)
+- [Open WebUI](https://molochai.dev/integrations/open-webui?utm_source=github&utm_medium=oss&utm_campaign=uncensored-llm-examples)
+- [LibreChat](https://molochai.dev/integrations/librechat?utm_source=github&utm_medium=oss&utm_campaign=uncensored-llm-examples)
+- [Coding agents](https://molochai.dev/integrations/coding-agents?utm_source=github&utm_medium=oss&utm_campaign=uncensored-llm-examples)
+
+Any other tool that speaks the OpenAI chat completions API needs the base URL, a key and a model id.
+Before relying on a parameter, check the
+[OpenAI compatibility matrix](https://molochai.dev/docs/openai-compatibility?utm_source=github&utm_medium=oss&utm_campaign=uncensored-llm-examples),
+which lists the supported, ignored and unavailable parameters.
 
 ## Requirements
 
 - Python 3.10 or newer for the Python examples and the scripts (CI uses 3.12).
-- Node.js 22 or newer for the SDK-based JavaScript and TypeScript examples (`openai` 7.x requires
-  it). [javascript/streaming-fetch](javascript/streaming-fetch) alone runs on Node.js 20.
+  [python/requirements.txt](python/requirements.txt) includes LangChain and LiteLLM, which make
+  the install noticeably larger; the other Python examples need only `openai` and `jsonschema`.
+- Node.js 22 or newer for the SDK-based JavaScript and TypeScript examples (`openai` 7.x and the
+  Vercel AI SDK packages require it). [javascript/streaming-fetch](javascript/streaming-fetch)
+  alone runs on Node.js 20.
 - For offline runs and the smoke tests: a clone of
   [uncensored-ai-api](https://github.com/Moloch-AI/uncensored-ai-api) next to this repository.
 - For the real API: a key from [dash.molochai.dev/account](https://dash.molochai.dev/account?utm_source=github&utm_medium=oss&utm_campaign=uncensored-llm-examples)
@@ -113,9 +136,9 @@ python scripts/run-all.py          # all examples; -k <text> to filter, -v to pr
 ```
 
 [scripts/run-all.py](scripts/run-all.py) starts the mock server, runs every example with sample
-inputs (40 cases, including the error paths: rate limits, quota, in-stream errors, the cap notice,
-503 fallback, JSON repair, the tool step limit), and fails if a case exits with an unexpected code,
-prints nothing, or misses its expected output. It finds the mock through `MOLOCHAI_MOCK_SERVER`
+inputs (67 cases, including the error paths: rate limits, quota, in-stream errors, the cap notice,
+503 fallback, JSON repair, the tool step limit, and each framework's error mapping and retries),
+and fails if a case exits with an unexpected code, prints nothing, or misses its expected output. It finds the mock through `MOLOCHAI_MOCK_SERVER`
 (default `../uncensored-ai-api/mock-server/server.mjs`, relative to the repository root).
 
 Linting, as in CI:
@@ -168,7 +191,9 @@ The OpenAPI spec, curl examples and dependency-free reference clients are in
 | HTTP 524 with an HTML body | A plain request ran past the edge timeout; use a streaming example |
 | `stream error upstream_timeout` / `preempted` | The stream failed after it started; retry (for `preempted`, after about a minute) |
 | `UnicodeEncodeError: 'charmap' codec` on Windows when redirecting output | Set `PYTHONUTF8=1` (PowerShell: `$env:PYTHONUTF8 = "1"`) so Python writes UTF-8 |
-| `npm ci` warns about the engine, or the SDK fails on Node 20 | `openai` 7.x needs Node.js 22 or newer |
+| `npm ci` warns about the engine, or the SDK fails on Node 20 | `openai` 7.x and the Vercel AI SDK need Node.js 22 or newer |
+| LangChain `with_structured_output` fails with `Invalid JSON` or missing fields | Its default method relies on `response_format`, which MolochAI drops; use `method="function_calling"` (see [python/langchain](python/langchain)) |
+| LiteLLM on Windows logs `cl100k_base.tiktoken` download errors when offline | A packaging issue in LiteLLM's Windows wheel; run one streamed request online once (see [python/litellm](python/litellm)) |
 | `mock server not found` | Clone uncensored-ai-api next to this repository or set `MOLOCHAI_MOCK_SERVER` |
 
 For problems with the hosted API, use [molochai.dev/contact](https://molochai.dev/contact?utm_source=github&utm_medium=oss&utm_campaign=uncensored-llm-examples).

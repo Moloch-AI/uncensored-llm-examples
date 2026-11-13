@@ -4,6 +4,10 @@ updates:
     directory: /python
     schedule:
       interval: weekly
+    ignore:
+      # langchain-core 1.8 and later need Python 3.11; these examples support 3.10.
+      - dependency-name: "langchain-core"
+        versions: [">=1.8"]
 
   - package-ecosystem: npm
     directory: /javascript

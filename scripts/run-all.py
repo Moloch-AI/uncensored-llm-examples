@@ -52,6 +52,7 @@ class Case:
     stdout_has: tuple[str, ...] = ()
     stdout_lacks: tuple[str, ...] = ()
     stderr_has: tuple[str, ...] = ()
+    stderr_lacks: tuple[str, ...] = ()
 
 
 @dataclass
@@ -66,6 +67,10 @@ class Result:
 
 def cases(fixtures: Path, node: str) -> list[Case]:
     tsx = [node, "--import", "tsx"]
+    run = time.time_ns()  # keeps [mock:flaky=N] bodies unique per run
+    langchain = [PY, "python/langchain/main.py"]
+    litellm = [PY, "python/litellm/main.py"]
+    ai_sdk = [*tsx, "vercel-ai-sdk/main.ts"]
     # fmt: off
     return [
         # --- python/quickstart
@@ -143,6 +148,56 @@ def cases(fixtures: Path, node: str) -> list[Case]:
         Case("python/code-explainer missing file",
              [PY, "python/code-explainer/main.py", "does-not-exist.py"], exit_code=1,
              stderr_has=("could not read",)),
+        # --- python/langchain
+        Case("python/langchain invoke", [*langchain, "invoke", "Say hello"],
+             stdout_has=("Mock reply from glm-5.3-flash: Say hello",),
+             stderr_has=("[reasoning] Mock reasoning for glm-5.3-flash.", "[usage] input=")),
+        Case("python/langchain invoke inline <think>", [*langchain, "invoke", "[mock:inline-think] hi"],
+             stdout_lacks=("<think>",), stderr_has=("[reasoning] Mock inline reasoning.",)),
+        Case("python/langchain stream", [*langchain, "stream", "Stream this please"],
+             stdout_has=("Mock reply from glm-5.3-flash: Stream this please",),
+             stderr_has=("[reasoning] Mock reasoning", "[usage] input=")),
+        Case("python/langchain stream in-stream error", [*langchain, "stream", "[mock:timeout] go"],
+             exit_code=1, stderr_has=("stream error upstream_timeout", "incomplete")),
+        Case("python/langchain tools", [*langchain, "tools"],
+             stdout_has=("after tool convert_units",),
+             stderr_has=("[step 1] convert_units(", "[done] 2 model call(s)")),
+        Case("python/langchain structured (function_calling)", [*langchain, "structured"],
+             stdout_has=('"sentiment": "positive"', '"rating": 1')),
+        Case("python/langchain structured json_schema (the default) fails",
+             [*langchain, "structured", "--method", "json_schema"], exit_code=1,
+             stderr_has=('method="json_schema"', "drops it", 'Use method="function_calling"')),
+        Case("python/langchain quota 429 is not retried", [*langchain, "invoke", "[mock:quota] q"],
+             exit_code=1, stderr_has=("HTTP 429 quota_exceeded", "resets_at="),
+             stderr_lacks=("[retryable]",)),
+        Case("python/langchain with_retry on 502", [*langchain, "invoke", f"[mock:flaky=2] lc {run}"],
+             stdout_has=("Mock reply",), stderr_has=("[retryable] HTTP 502 upstream_unreachable",)),
+        # --- python/litellm
+        Case("python/litellm stream", [*litellm, "Stream this please"],
+             stdout_has=("Mock reply from glm-5.3-flash: Stream this please",),
+             stderr_has=("[reasoning] Mock reasoning", "[usage] prompt=")),
+        Case("python/litellm --no-stream inline <think>",
+             [*litellm, "--no-stream", "[mock:inline-think] hi"],
+             stdout_lacks=("<think>",), stderr_has=("[reasoning] Mock inline reasoning.",)),
+        Case("python/litellm --async", [*litellm, "--async", "Async hello"],
+             stdout_has=("Mock reply from glm-5.3-flash: Async hello",), stderr_has=("[usage]",)),
+        Case("python/litellm stream cap notice", [*litellm, "[mock:cap] go"],
+             stdout_has=("Mock reply",), stdout_lacks=("[Response is too large",),
+             stderr_has=("output cap",)),
+        Case("python/litellm 503 model_unavailable", [*litellm, "[mock:unavailable] u"],
+             exit_code=1, stderr_has=("[litellm.ServiceUnavailableError] HTTP 503 model_unavailable",),
+             stderr_lacks=("[retry]",)),
+        Case("python/litellm 429 quota", [*litellm, "--no-stream", "[mock:quota] q"],
+             exit_code=1, stdout_lacks=("Give Feedback",),
+             stderr_has=("[litellm.RateLimitError] HTTP 429 quota_exceeded", "resets_at="),
+             stderr_lacks=("[retry]",)),
+        Case("python/litellm 413", [*litellm, "--no-stream", "[mock:context] c"],
+             exit_code=1, stderr_has=("[litellm.APIError] HTTP 413 context_length_exceeded", "bound_by=plan")),
+        Case("python/litellm in-stream error", [*litellm, "--async", "[mock:preempted] go"],
+             exit_code=1,
+             stderr_has=("[litellm.MidStreamFallbackError] stream error preempted", "about a minute")),
+        Case("python/litellm retry on 502", [*litellm, "--no-stream", f"[mock:flaky=2] ll {run}"],
+             stdout_has=("Mock reply",), stderr_has=("[retry]", "HTTP 502 upstream_unreachable")),
         # --- javascript/streaming-fetch
         Case("javascript/streaming-fetch", [node, "streaming-fetch/main.mjs", "Fetch this"],
              cwd="javascript", stdout_has=("Mock reply from glm-5.3-flash: Fetch this",),
@@ -197,6 +252,34 @@ def cases(fixtures: Path, node: str) -> list[Case]:
         Case("typescript/structured-extraction",
              [*tsx, "structured-extraction/main.ts", "structured-extraction/sample-notes.txt"],
              cwd="typescript", stdout_has=('"action_items"',), stderr_has=("[extracted]",)),
+        # --- typescript/vercel-ai-sdk
+        Case("typescript/vercel-ai-sdk generate", [*ai_sdk, "generate", "Say hello"], cwd="typescript",
+             stdout_has=("Mock reply from glm-5.3-flash: Say hello",),
+             stderr_has=("[reasoning] Mock reasoning for glm-5.3-flash.", "[usage] input=")),
+        Case("typescript/vercel-ai-sdk generate inline <think>",
+             [*ai_sdk, "generate", "[mock:inline-think] hi"], cwd="typescript",
+             stdout_lacks=("<think>",), stderr_has=("[reasoning] Mock inline reasoning.",)),
+        Case("typescript/vercel-ai-sdk stream", [*ai_sdk, "stream", "Stream this please"],
+             cwd="typescript", stdout_has=("Mock reply from glm-5.3-flash: Stream this please",),
+             stderr_has=("[reasoning] Mock reasoning", "[usage] input=")),
+        Case("typescript/vercel-ai-sdk stream cap notice", [*ai_sdk, "stream", "[mock:cap] go"],
+             cwd="typescript", stdout_has=("Mock reply",), stdout_lacks=("[Response is too large",),
+             stderr_has=("output cap",)),
+        Case("typescript/vercel-ai-sdk in-stream error", [*ai_sdk, "stream", "[mock:timeout] go"],
+             cwd="typescript", exit_code=1,
+             stderr_has=("stream error upstream_timeout", "incomplete")),
+        Case("typescript/vercel-ai-sdk 503 before the stream", [*ai_sdk, "stream", "[mock:unavailable] u"],
+             cwd="typescript", exit_code=1, stderr_has=("HTTP 503 model_unavailable",),
+             stderr_lacks=("[retry]",)),
+        Case("typescript/vercel-ai-sdk tools", [*ai_sdk, "tools"], cwd="typescript",
+             stdout_has=("after tool convert_units",),
+             stderr_has=("[step 1] convert_units(", "[done] 2 model call(s)")),
+        Case("typescript/vercel-ai-sdk 429 quota", [*ai_sdk, "generate", "[mock:quota] q"],
+             cwd="typescript", exit_code=1, stderr_has=("HTTP 429 quota_exceeded", "resets_at="),
+             stderr_lacks=("[retry]",)),
+        Case("typescript/vercel-ai-sdk retry on 502", [*ai_sdk, "generate", f"[mock:flaky=2] ai {run}"],
+             cwd="typescript", stdout_has=("Mock reply",),
+             stderr_has=("[retry] HTTP 502 upstream_unreachable",)),
         # --- local-development
         Case("local-development/devenv.py --mock",
              [PY, "local-development/devenv.py", "--mock", "--", PY, "python/quickstart/main.py",
@@ -276,6 +359,7 @@ def run_case(index: int, case: Case, mocks: dict[tuple[str, ...], MockServer]) -
     problems += [f"stdout lacks {s!r}" for s in case.stdout_has if s not in out]
     problems += [f"stdout contains {s!r}" for s in case.stdout_lacks if s in out]
     problems += [f"stderr lacks {s!r}" for s in case.stderr_has if s not in err]
+    problems += [f"stderr contains {s!r}" for s in case.stderr_lacks if s in err]
     return Result(case, not problems, seconds, problems, out, err)
 
 
