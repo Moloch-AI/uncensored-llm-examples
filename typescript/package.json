@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.92",
-    "ai": "7.0.172",
+    "ai": "7.0.181",
     "openai": "7.56.0",
     "zod": "4.6.7"
   },
