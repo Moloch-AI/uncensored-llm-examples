@@ -3,7 +3,7 @@ openai==3.50.0
 jsonschema==4.26.0
 # python/langchain. langchain-core 1.8 needs Python 3.11; 1.7.7 is the newest
 # release that installs on 3.10, which these examples support.
-langchain-openai==1.7.4
+langchain-openai==1.8.5
 langchain-core==1.7.7
 pydantic==2.14.3
 # python/litellm
