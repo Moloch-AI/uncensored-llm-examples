@@ -12,7 +12,7 @@
     "lint": "biome ci ."
   },
   "dependencies": {
-    "openai": "7.56.0"
+    "openai": "7.63.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.7"
