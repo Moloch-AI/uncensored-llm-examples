@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "3.0.92",
+    "@ai-sdk/openai-compatible": "3.0.94",
     "ai": "7.0.172",
     "openai": "7.56.0",
     "zod": "4.6.7"
